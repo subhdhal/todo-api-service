@@ -23,5 +23,3 @@ This repo is a simple demo of deploying a FastAPI “todo” microservice to Kub
 2. Point `kubectl` to that cluster and install Argo CD.
 3. Apply the files under `argo/` into the cluster where Argo CD runs.
 4. Push code/Helm changes to GitHub and let Argo CD sync them to the cluster.
-
-This is meant as a learning/portfolio project, not a full production platform.
