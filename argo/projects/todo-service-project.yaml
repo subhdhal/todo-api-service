@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: todo-service
+  namespace: argocd
+spec:
+  description: Todo service environments
+  sourceRepos:
+  - https://github.com/subhdhal/todo-api-service.git
+  destinations:
+  - namespace: todo-dev
+    server: https://kubernetes.default.svc
+  - namespace: todo-staging
+    server: https://kubernetes.default.svc
+  - namespace: todo-prod
+    server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+  - group: '*'
+    kind: '*'
+  namespaceResourceWhitelist:
+  - group: '*'
+    kind: '*'

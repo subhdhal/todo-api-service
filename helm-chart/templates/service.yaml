@@ -6,12 +6,9 @@ spec:
   type: {{ .Values.service.type }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: http
+      targetPort: {{ .Values.containerPort }}
       protocol: TCP
       name: http
   selector:
-    app: {{ include "todo-service.name" . }}
-  ports:
-    - port: {{ .Values.service.ort }}
-      targetPort: {{ .Values.containerPort }}
-
+    app.kubernetes.io/name: {{ include "todo-service.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}

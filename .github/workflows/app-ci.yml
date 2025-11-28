@@ -1,0 +1,96 @@
+name: app-ci
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "app/**"
+      - "Dockerfile"
+      - ".github/workflows/app-ci.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - "Dockerfile"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run basic import check
+        run: python -m py_compile app/main.py app/models.py
+
+  build-and-push-image:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build image
+        run: |
+          IMAGE_NAME="subhadhal/todo-service"
+          TAG="${GITHUB_SHA::7}"
+          docker build -t "$IMAGE_NAME:$TAG" -t "$IMAGE_NAME:latest" .
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Push image
+        run: |
+          docker push "$IMAGE_NAME:${IMAGE_TAG}"
+          docker push "$IMAGE_NAME:latest"
+
+  update-dev-helm-values:
+    needs: build-and-push-image
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Bump dev Helm values with new image tag
+        run: |
+          TAG="${GITHUB_SHA::7}"
+          FILE="gitops/values/todo-service/dev.yml"
+
+          sed -i "s/^  tag:.*/  tag: \"${TAG}\"/" "$FILE"
+
+          if git diff --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add "$FILE"
+          git commit -m "chore: bump dev image to ${TAG} [skip ci]"
+          git push

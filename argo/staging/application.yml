@@ -1,0 +1,24 @@
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: todo-service-staging
+  namespace: argocd
+spec:
+  project: todo-service
+  source:
+    repoURL: https://github.com/subhdhal/todo-api-service.git
+    targetRevision: main
+    path: helm-chart
+    helm:
+      valueFiles:
+      - gitops/values/todo-service/staging.yml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: todo-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
